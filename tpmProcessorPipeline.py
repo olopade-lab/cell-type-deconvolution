@@ -91,7 +91,7 @@ def main():
     if args.method=='all':
         listA=pd.read_csv('./genesused/allGenesUsed.csv')
     elif args.method=='quantiseq':
-        llistA=pd.read_csv('./genesused/quantiseq.csv')
+        listA=pd.read_csv('./genesused/quantiseq.csv')
     elif args.method=='mcp_counter':
         listA=pd.read_csv('./genesused/mcpCounter.csv')
     elif args.method=='cibersort':
