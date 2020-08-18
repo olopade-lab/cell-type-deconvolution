@@ -1,32 +1,45 @@
-tpm<-read.csv('/Users/arvindkrishnan/Downloads/TpmProcessed.csv')
-rowTpm<-as.character(tpm[,2])
-tpm<-tpm[,3:dim(tpm)[2]]
-row.names(tpm)<-rowTpm
+setwd("~/Downloads/deconvGenes/")
 
-quantiseqResults<-immunedeconv::deconvolute(tpm,"quantiseq")
-
-indicVec<-rep('brca', ncol(tpm))
-timerResults<-immunedeconv::deconvolute(tpm,"timer", indicVec)
+process <- function(file){
+  tpm<-read.csv(file)
+  rowTpm<-as.character(tpm[,2])
+  tpm<-tpm[,3:dim(tpm)[2]]
+  row.names(tpm)<-rowTpm
+  return(tpm)
+}
 
 library(immunedeconv)
-set_cibersort_binary("/Users/arvindkrishnan/Downloads/CIBERSORT.R")
-set_cibersort_mat("/Users/arvindkrishnan/Downloads/deconvGenes/LM22.txt")
-cibersortResults<-immunedeconv::deconvolute(tpm,"cibersort")
-cibersort_absResults<-immunedeconv::deconvolute(tpm,"cibersort_abs")
 
-mcp_counterResults<-immunedeconv::deconvolute(tpm,"mcp_counter")
-xcellResults<-immunedeconv::deconvolute(tpm,"xcell")
-epicResults<-immunedeconv::deconvolute(tpm,"epic")
 
+allGenes<-process('./Output/allGenes.csv')
+
+timer<-process('./Output/timer.csv')
+epic<-process('./Output/epic.csv')
+xcell<-process('./Output/xcell.csv')
+cibersort<-process('./Output/cibersort.csv')
+mcp_counter<-process('./Output/mcp_counter.csv')
+cibersort_abs<-process('./Output/cibersort_abs.csv')
+quantiseq<-process('./Output/quantiseq.csv')
+
+indicVec<-rep('brca', ncol(timer))
+set_cibersort_binary("./ciberFiles/CIBERSORT.R")
+set_cibersort_mat("./ciberFiles/LM22.txt")
+
+quantiseqResults<-deconvolute(quantiseq,"quantiseq")
+mcp_counterResults<-immunedeconv::deconvolute(mcp_counter,"mcp_counter")
+xcellResults<-immunedeconv::deconvolute(xcell,"xcell")
+epicResults<-immunedeconv::deconvolute(epic,"epic")
+
+cibersortResults<-immunedeconv::deconvolute(cibersort,"cibersort")
+cibersort_absResults<-immunedeconv::deconvolute(cibersort_abs,"cibersort_abs")
+
+timerResults<-immunedeconv::deconvolute(timer ,"timer", indicVec)
 
 
 combine_rows <- function(data, row1, row2) {
   data[row2, 2:ncol(quantiseqResults)] <- data[row1, 2:ncol(quantiseqResults)] + data[row2, 2:ncol(quantiseqResults)]
   data[-row1, ]
 }
-
-
-
 
 quantiseqResults<-combine_rows(quantiseqResults,2,3)
 quantiseqResults[2,1]<-"Macrophage"
@@ -46,7 +59,6 @@ cibersortResults<-combine_rows(cibersortResults,9,10)
 cibersortResults<-combine_rows(cibersortResults,9,10)
 cibersortResults[9,1]<-"Macrophage"
 
-
 cibersortResults<-combine_rows(cibersortResults,10,11)
 cibersortResults[10,1]<-"Myeloid dendritic cell"
 
@@ -58,9 +70,6 @@ cibersort_absResults<-combine_rows(cibersort_absResults,3,4)
 cibersort_absResults<-combine_rows(cibersort_absResults,3,4)
 cibersort_absResults[3,1]<-"T cell CD4+"
 
-
-
-
 cibersort_absResults<-combine_rows(cibersort_absResults,7,8)
 cibersort_absResults[7,1]<-"NK cell"
 
@@ -68,22 +77,9 @@ cibersort_absResults<-combine_rows(cibersort_absResults,9,10)
 cibersort_absResults<-combine_rows(cibersort_absResults,9,10)
 cibersort_absResults[9,1]<-"Macrophage"
 
-
 cibersort_absResults<-combine_rows(cibersort_absResults,10,11)
 cibersort_absResults[10,1]<-"Myeloid dendritic cell"
 
-'''
-xcellResults<-combine_rows(xcellResults,3,4)
-xcellResults<-combine_rows(xcellResults,3,4)
-xcellResults<-combine_rows(xcellResults,3,4)
-xcellResults<-combine_rows(xcellResults,3,4)
-xcellResults[3,1]<-"T cell CD4+"
-
-xcellResults<-combine_rows(xcellResults,4,5)
-xcellResults<-combine_rows(xcellResults,4,5)
-xcellResults<-combine_rows(xcellResults,4,5)
-xcellResults[4,1]<-"T cell CD8+"
-'''
 
 library(ggplot2)
 library(gridExtra)
@@ -92,10 +88,11 @@ plotter<-function(df, n){
   p<-ggplot(data=df, aes(x=samples, y=values)) +
     geom_bar(stat="identity", color="blue", fill="blue") +
     theme_classic() +
-    ggtitle(n) +
+    #ggtitle(n) +
     theme(axis.text.x=element_text(size = 0.5, angle=90), axis.title.y=element_blank())
   p
 }
+
 
 
 quantiseqBcell<-data.frame(samples=c(colnames(quantiseqResults)[2:ncol(quantiseqResults)]), values=as.numeric(quantiseqResults[1,2:ncol(quantiseqResults)]))
@@ -245,8 +242,41 @@ g<-arrangeGrob(arrangeGrob(arrangeGrob(quantiseqBcell, top="B cell"), arrangeGro
                arrangeGrob(xcellBcell, xcellTcell8, xcellTcell4, xcellMacrophage, xcellNeutrophil, xcellmDC, xcellMonocyte, xcellNKcell, left="xcell", nrow=1),
                arrangeGrob(epicBcell, epicTcell8, epicTcell4, epicMacrophage, epicNeutrophil, epicmDC, epicMonocyte, epicNKcell, left="epic", nrow=1),
                nrow=7)
-ggsave('/Users/arvindkrishnan/Downloads/barplot.pdf',g, height=10, width = 50, limitsize = FALSE)
+ggsave('./plots/barplot.pdf',g, height=15, width = 50, limitsize = FALSE)
 
+
+library(dplyr)
+library(tidyr)
+plottingFunctions<-function(results, name){
+  
+  #for (i in colnames(results)[2:84]) {
+  #name<-paste(i, deparse(substitute(results)), sep = "_")
+  #assign(name, results[,c("cell_type",i)])
+  #assign("res", results[,c("cell_type",i)])
+  
+  results %>%
+    gather(sample, fraction, -cell_type) %>%
+    # plot as stacked bar chart
+    ggplot(aes(x=sample, y=fraction, fill=cell_type)) +
+    ylab('quantity') +
+    geom_bar(stat='identity') +
+    coord_flip() +
+    scale_fill_brewer(palette="Paired") +
+    scale_x_discrete(limits = rev(levels(results)))
+  #  fileN=paste("./deconvFiguresSamples/",name,sep = "_")
+  #  fileN=paste(fileN,"png",sep = ".")
+  #  ggsave(fileN)
+  ggsave(paste('./plots/',name,'.pdf', sep=""), height=15, width = 15, limitsize = FALSE)
+  #}
+}
+
+plottingFunctions(epicResults, 'epic')
+plottingFunctions(quantiseqResults, 'quantiseq')
+plottingFunctions(mcp_counterResults,'mcp_counter')
+#plottingFunctions(xcellResults,'xcell' )
+#plottingFunctions(ciberResults, 'ciber')
+#plottingFunctions(ciber_absResults, 'ciber_abs')
+plottingFunctions(timerResults, 'timer')
 
 
 
@@ -278,11 +308,11 @@ pieplot<-function(df, name){
     ggtitle(name) +
     blank_theme
   bp
-#  pie <- bp + coord_polar("y", start=0) +
-#    blank_theme
+  #  pie <- bp + coord_polar("y", start=0) +
+  #    blank_theme
   
-#  pie
-  }
+  #  pie
+}
 
 myplotsCibersort <- vector('list', 0)
 myplotsCibersort_abs <- vector('list', 0)
@@ -335,73 +365,7 @@ for (i in colnames(epicResults)[2:ncol(epicResults)]) {
 
 
 g<-arrangeGrob(grobs = c(myplotsCibersort, myplotsCibersort_abs, myplotsQuantiseq, myplotsepic), nrow = 4)
-ggsave('/Users/arvindkrishnan/Downloads/pieplot.pdf',g, height=20, width = 500, limitsize = FALSE)
+ggsave('./plots/pieplot.pdf',g, height=20, width = 500, limitsize = FALSE)
 
 
-library(dplyr)
-library(tidyr)
 
-quantiseqResults %>%
-  gather(sample, fraction, -cell_type) %>%
-  # plot as stacked bar chart
-  ggplot(aes(x=sample, y=fraction, fill=cell_type)) +
-  geom_bar(stat='identity') +
-  coord_flip() +
-  scale_fill_brewer(palette="Paired") +
-  scale_x_discrete(limits = rev(levels(quantiseqResults)))
-ggsave()
-
-
-timerResults %>%
-  gather(sample, fraction, -cell_type) %>%
-  # plot as stacked bar chart
-  ggplot(aes(x=sample, y=fraction, fill=cell_type)) +
-  geom_bar(stat='identity') +
-  coord_flip() +
-  scale_fill_brewer(palette="Paired") +
-  scale_x_discrete(limits = rev(levels(timerResults)))
-
-cibersortResults %>%
-  gather(sample, fraction, -cell_type) %>%
-  # plot as stacked bar chart
-  ggplot(aes(x=sample, y=fraction, fill=cell_type)) +
-  geom_bar(stat='identity') +
-  coord_flip() +
-  scale_fill_brewer(palette="Paired") +
-  scale_x_discrete(limits = rev(levels(cibersortResults)))
-
-cibersort_absResults %>%
-  gather(sample, fraction, -cell_type) %>%
-  # plot as stacked bar chart
-  ggplot(aes(x=sample, y=fraction, fill=cell_type)) +
-  geom_bar(stat='identity') +
-  coord_flip() +
-  scale_fill_brewer(palette="Paired") +
-  scale_x_discrete(limits = rev(levels(cibersort_absResults)))
-
-mcp_counterResults %>%
-  gather(sample, fraction, -cell_type) %>%
-  # plot as stacked bar chart
-  ggplot(aes(x=sample, y=fraction, fill=cell_type)) +
-  geom_bar(stat='identity') +
-  coord_flip() +
-  scale_fill_brewer(palette="Paired") +
-  scale_x_discrete(limits = rev(levels(mcp_counterResults)))
-
-xcellResults %>%
-  gather(sample, fraction, -cell_type) %>%
-  # plot as stacked bar chart
-  ggplot(aes(x=sample, y=fraction, fill=cell_type)) +
-  geom_bar(stat='identity') +
-  coord_flip() +
-  scale_fill_brewer(palette="Paired") +
-  scale_x_discrete(limits = rev(levels(xcellResults)))
-
-epicResults %>%
-  gather(sample, fraction, -cell_type) %>%
-  # plot as stacked bar chart
-  ggplot(aes(x=sample, y=fraction, fill=cell_type)) +
-  geom_bar(stat='identity') +
-  coord_flip() +
-  scale_fill_brewer(palette="Paired") +
-  scale_x_discrete(limits = rev(levels(epicResults)))
