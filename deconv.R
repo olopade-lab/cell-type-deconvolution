@@ -1,18 +1,19 @@
-setwd("~/Downloads/deconvGenes/")
+setwd("~/Downloads/deconvGenes/") #sets directory
 
-process <- function(file){
-  tpm<-read.csv(file)
-  rowTpm<-as.character(tpm[,2])
+process <- function(file){ #function cleans data-frame by having the gene name listed as row columns rather than first column
+  tpm<-read.csv(file) #reads file
+  rowTpm<-as.character(tpm[,2]) 
   tpm<-tpm[,3:dim(tpm)[2]]
   row.names(tpm)<-rowTpm
   return(tpm)
 }
 
-library(immunedeconv)
+library(immunedeconv) #loads library
 
 
 allGenes<-process('./Output/allGenes.csv')
 
+#loads processed files (tpm with hgnc symbols), then processes them
 timer<-process('./Output/timer.csv')
 epic<-process('./Output/epic.csv')
 xcell<-process('./Output/xcell.csv')
@@ -21,10 +22,13 @@ mcp_counter<-process('./Output/mcp_counter.csv')
 cibersort_abs<-process('./Output/cibersort_abs.csv')
 quantiseq<-process('./Output/quantiseq.csv')
 
-indicVec<-rep('brca', ncol(timer))
-set_cibersort_binary("./ciberFiles/CIBERSORT.R")
-set_cibersort_mat("./ciberFiles/LM22.txt")
+indicVec<-rep('brca', ncol(timer)) #sets cancer type for timer algorithm
 
+#necessary files for cibersort
+set_cibersort_binary("./ciberFiles/CIBERSORT.R")
+set_cibersort_mat("./ciberFiles/LM22.txt") #genes used by cibersort
+
+#runs immune deconvolution methods 
 quantiseqResults<-deconvolute(quantiseq,"quantiseq")
 mcp_counterResults<-immunedeconv::deconvolute(mcp_counter,"mcp_counter")
 xcellResults<-immunedeconv::deconvolute(xcell,"xcell")
@@ -35,7 +39,7 @@ cibersort_absResults<-immunedeconv::deconvolute(cibersort_abs,"cibersort_abs")
 
 timerResults<-immunedeconv::deconvolute(timer ,"timer", indicVec)
 
-
+#rows with the same information are combined (ex. different B cells are combined as 'B cell')
 combine_rows <- function(data, row1, row2) {
   data[row2, 2:ncol(quantiseqResults)] <- data[row1, 2:ncol(quantiseqResults)] + data[row2, 2:ncol(quantiseqResults)]
   data[-row1, ]
@@ -83,6 +87,8 @@ cibersort_absResults[10,1]<-"Myeloid dendritic cell"
 
 library(ggplot2)
 library(gridExtra)
+
+#creates intersample comparison barplots
 
 plotter<-function(df, n){
   p<-ggplot(data=df, aes(x=samples, y=values)) +
@@ -285,6 +291,7 @@ plottingFunctions(timerResults, 'timer')
 library(ggplot2)
 library(scales)
 library(gridExtra)
+#creates intrasample comparison bar plots
 
 blank_theme <- theme_minimal() +
   theme(
